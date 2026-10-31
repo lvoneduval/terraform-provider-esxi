@@ -138,6 +138,7 @@ provider "esxi" {
   esxi_hostssl       = "443"
   esxi_username      = "root"
   esxi_password      = "MyPassword"
+  #esxi_private_key  = "~/.ssh/id_ed25519"   # optional, see below
 }
 
 resource "esxi_guest" "vmtest" {
@@ -172,6 +173,7 @@ Configuration reference
   * esxi_hostssl - Optional - Default "443".
   * esxi_username - Optional - Default "root".
   * esxi_password - Required
+  * esxi_private_key - Optional - Path to an ssh private key (without passphrase), for example "~/.ssh/id_ed25519".  When set, it is used instead of the password to authenticate the ssh connection to the esxi host (the password is still tried if the key is refused).  ovftool, used by ovf_source and clone_from_vm, always connects with esxi_password.  The public key must be installed on the esxi host (/etc/ssh/keys-root/authorized_keys).  Can also be set with the esxi_private_key environment variable.
 
 
 * resource "esxi_resource_pool"

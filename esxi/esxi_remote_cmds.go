@@ -15,19 +15,14 @@ import (
 // Connect to esxi host using ssh
 func connectToHost(esxiConnInfo ConnectionStruct, attempt int) (*ssh.Client, *ssh.Session, error) {
 
+	authMethods, err := sshAuthMethods(esxiConnInfo)
+	if err != nil {
+		return nil, nil, err
+	}
+
 	sshConfig := &ssh.ClientConfig{
 		User: esxiConnInfo.user,
-		Auth: []ssh.AuthMethod{
-			ssh.KeyboardInteractive(func(user, instruction string, questions []string, echos []bool) ([]string, error) {
-				// Reply password to all questions
-				answers := make([]string, len(questions))
-				for i, _ := range answers {
-					answers[i] = esxiConnInfo.pass
-				}
-
-				return answers, nil
-			}),
-		},
+		Auth: authMethods,
 	}
 
 	sshConfig.HostKeyCallback = ssh.InsecureIgnoreHostKey()

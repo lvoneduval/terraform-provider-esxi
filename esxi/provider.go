@@ -49,6 +49,12 @@ func Provider() terraform.ResourceProvider {
 				DefaultFunc: schema.EnvDefaultFunc("esxi_password", "unset"),
 				Description: "esxi ssh password.",
 			},
+			"esxi_private_key": &schema.Schema{
+				Type:        schema.TypeString,
+				Optional:    true,
+				DefaultFunc: schema.EnvDefaultFunc("esxi_private_key", ""),
+				Description: "Path to an ssh private key (without passphrase) to authenticate to the esxi host instead of the password.",
+			},
 		},
 		ResourcesMap: map[string]*schema.Resource{
 			"esxi_guest":         resourceGUEST(),
@@ -63,11 +69,12 @@ func Provider() terraform.ResourceProvider {
 
 func configureProvider(d *schema.ResourceData) (interface{}, error) {
 	config := Config{
-		esxiHostName:    d.Get("esxi_hostname").(string),
-		esxiHostSSHport: d.Get("esxi_hostport").(string),
-		esxiHostSSLport: d.Get("esxi_hostssl").(string),
-		esxiUserName:    d.Get("esxi_username").(string),
-		esxiPassword:    d.Get("esxi_password").(string),
+		esxiHostName:       d.Get("esxi_hostname").(string),
+		esxiHostSSHport:    d.Get("esxi_hostport").(string),
+		esxiHostSSLport:    d.Get("esxi_hostssl").(string),
+		esxiUserName:       d.Get("esxi_username").(string),
+		esxiPassword:       d.Get("esxi_password").(string),
+		esxiPrivateKeyPath: d.Get("esxi_private_key").(string),
 	}
 
 	if err := config.validateEsxiCreds(); err != nil {
