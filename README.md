@@ -67,6 +67,7 @@ What's New:
 Features and Compatibility
 --------------------------
 * Source image can be a clone of a VM or local vmx, ovf, ova file. This provider uses ovftool, so there should be a wide compatibility.
+* A VM can also be deployed by copying the files of an existing VM exactly as they are (disk, flat disk, .nvram, .vmx), without ovftool.  This keeps UEFI VMs bootable.  See esxi_vm_template and esxi_guest_clone.
 * Supports adding your VM to Resource Pools to partition CPU and memory usage from other VMs on your ESXi host.
 * Terraform will Create, Destroy, Update & Import Resource Pools.
 * Terraform will Create, Destroy, Update & Import Guest VMs.
@@ -232,6 +233,27 @@ Configuration reference
   * ovf_properties_timer - Optional - Length of time to wait for ovf_properties to process.  Default 90s.
 
 
+* resource "esxi_vm_template"
+  * source_path - Required - Local folder holding the source VM files (.vmx, .nvram, .vmdk, -flat.vmdk).
+  * source_name - Required - Source VM name (the .vmx and .vmdk file names, without extension).
+  * disk_store - Required - esxi Disk Store where the template is stored, in templates/<source_name>.
+  * vmdk_path - Computed - Full path of the template vmdk on the esxi host.  Use it as template_vmdk_path of esxi_guest_clone.
+  * dst_path - Computed - Full path of the template folder on the esxi host.
+
+
+* resource "esxi_guest_clone"
+  * guest_name - Required - The name of the new Guest.
+  * source_path - Required - Local folder holding the source VM files (.vmx, .nvram, .vmdk ...).
+  * source_name - Required - Source VM name (the .vmx and .vmdk file names, without extension).
+  * disk_store - Required - esxi Disk Store where the new Guest is created.
+  * template_vmdk_path - Optional - Path of a template vmdk already on the esxi host (see esxi_vm_template).  If set, the disk is cloned on the host with vmkfstools (thin) instead of being copied from source_path.
+  * resource_pool_name - Optional - Resource Pool name.  Default '/'.
+  * power - Optional - Power state, on or off.  Default on.
+  * guest_startup_timeout - Optional - Seconds to wait for an IP address.  Default 120.
+  * guest_shutdown_timeout - Optional - Seconds to wait for a graceful shutdown.  Default 20.
+  * ip_address - Computed - The IP address reported by VMware tools.
+
+
 * resource "esxi_vswitch"
   * name - Required - The vswitch name.
   * ports - Optional - The number of ports available on the vswitch.  Default 128.
@@ -261,6 +283,17 @@ Using ovf_source & clone_from_vm
     * For example, Ubuntu cloud-images: https://cloud-images.ubuntu.com/trusty/current/trusty-server-cloudimg-amd64.ova
 * If neither is specified, then a bare-metal VM will be created.  There will be no OS on this vm.  If the VM is powered on, it will default to a network PXE boot.  
 * ovf_source & clone_from_vm are mutually exclusive.
+
+
+Using esxi_vm_template & esxi_guest_clone
+-----------------------------------------
+Use these when ovf_source and clone_from_vm are not suitable.  ovftool rebuilds the disk when it imports a source, and a UEFI VM prepared on another machine may then fail to boot (the firmware reports a corrupted disk).  esxi_guest_clone copies the disk, the .nvram and the .vmx exactly as they are, so the VM boots as the original did.
+* The source VM must be powered off and its files must be in a local folder.
+* Without template_vmdk_path, the vmdk and flat vmdk are copied from source_path for each new Guest.
+* With template_vmdk_path, esxi_vm_template copies the disk once to the esxi host and each Guest is cloned from it with vmkfstools, which is much faster.
+* Files are sent over the same ssh connection as the other commands (esxi_hostname, esxi_hostport, esxi_username and esxi_password).  The size of each copied file is checked.
+* Names and paths (guest_name, source_name, disk_store, template_vmdk_path) may only contain letters, digits, space, '.', '_' and '-' (and '/' in paths), and no '..'.  They are used in commands run on the esxi host.
+* esxi_vm_template only deletes folders under /vmfs/volumes/<disk_store>/templates/.
 
 
 Known issues with vmware_esxi
