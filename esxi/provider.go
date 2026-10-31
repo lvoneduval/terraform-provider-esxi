@@ -56,6 +56,8 @@ func Provider() terraform.ResourceProvider {
 			"esxi_virtual_disk":  resourceVIRTUALDISK(),
 			"esxi_vswitch":       resourceVSWITCH(),
 			"esxi_portgroup":     resourcePORTGROUP(),
+			"esxi_guest_clone":   resourceGUESTCLONE(),
+			"esxi_vm_template":   resourceVMTEMPLATE(),
 		},
 		ConfigureFunc: configureProvider,
 	}
