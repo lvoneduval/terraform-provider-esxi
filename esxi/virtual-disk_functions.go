@@ -6,7 +6,20 @@ import (
 	"log"
 	"strconv"
 	"strings"
+
+	"golang.org/x/crypto/ssh"
 )
+
+// Returned by virtualDiskREAD when the virtual disk is not on the esxi host
+// (as opposed to a failure to reach the host or to run a command on it).
+var errVirtualDiskNotFound = errors.New("virtual disk not found")
+
+// "test -s" exits with status 1 when the file is missing or empty.  Any other
+// error (connection lost, command not found...) is not proof that the disk is gone.
+func virtualDiskMissing(err error) bool {
+	var exitErr *ssh.ExitError
+	return errors.As(err, &exitErr) && exitErr.ExitStatus() == 1
+}
 
 //
 //  Validate Disk Store
@@ -160,6 +173,9 @@ func virtualDiskREAD(c *Config, virtdisk_id string) (string, string, string, int
 	remote_cmd := fmt.Sprintf("test -s \"%s\"", virtdisk_id)
 	_, err := runRemoteSshCommand(esxiConnInfo, remote_cmd, "test if virtual disk exists")
 	if err != nil {
+		if virtualDiskMissing(err) {
+			return "", "", "", 0, "", fmt.Errorf("%w: %s", errVirtualDiskNotFound, virtdisk_id)
+		}
 		return "", "", "", 0, "", err
 	}
 

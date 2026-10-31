@@ -1,6 +1,7 @@
 package esxi
 
 import (
+	"errors"
 	"fmt"
 	"log"
 
@@ -12,6 +13,12 @@ func resourceVIRTUALDISKRead(d *schema.ResourceData, m interface{}) error {
 	log.Println("[resourceVIRTUALDISKRead]")
 
 	virtual_disk_disk_store, virtual_disk_dir, virtual_disk_name, virtual_disk_size, virtual_disk_type, err := virtualDiskREAD(c, d.Id())
+	if errors.Is(err, errVirtualDiskNotFound) {
+		// The disk was removed outside of terraform: forget it so it can be recreated.
+		log.Printf("[resourceVIRTUALDISKRead] %s\n", err)
+		d.SetId("")
+		return nil
+	}
 	if err != nil {
 		d.SetId("")
 		return fmt.Errorf("Failed to refresh virtual disk: %s\n", err)
